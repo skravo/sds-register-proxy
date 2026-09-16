@@ -549,6 +549,10 @@
           }]
         })
       });
+      if(!idResp.ok){
+        const errBody = await idResp.text();
+        throw new Error(`Identify step failed (HTTP ${idResp.status}): ${errBody.slice(0,300)}`);
+      }
       const idData = await idResp.json();
       const productGuess = (idData.content||[]).map(b=>b.text||'').join('').trim();
 
@@ -584,6 +588,10 @@ Respond with ONLY a single valid JSON object with exactly these keys, no markdow
           tools:[{type:'web_search_20250305', name:'web_search'}]
         })
       });
+      if(!sdsResp.ok){
+        const errBody = await sdsResp.text();
+        throw new Error(`Lookup step failed (HTTP ${sdsResp.status}): ${errBody.slice(0,300)}`);
+      }
       const sdsData = await sdsResp.json();
       const rawText = (sdsData.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
       const cleaned = rawText.replace(/```json|```/g,'').trim();
@@ -618,7 +626,7 @@ Respond with ONLY a single valid JSON object with exactly these keys, no markdow
 
     }catch(err){
       setStatus('');
-      showError('Something went wrong reaching the lookup service. Check your connection and try again.');
+      showError('Lookup failed: ' + (err && err.message ? err.message : 'unknown error') + '. Check your connection and try again.');
       postShotControls.classList.remove('hidden');
     }
   });
