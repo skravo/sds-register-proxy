@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chemwatch Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1F1D;
+    --paper:#F1EFE6;
+    --panel:#26302C;
+    --safety-yellow:#F2B705;
+    --hazard-red:#B23A24;
+    --clear-green:#3E6B52;
+    --line:#3F4A44;
+    --line-light:#C9C4B4;
+    --muted:#8B9089;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .app{
+    max-width:560px;
+    margin:0 auto;
+    width:100%;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    position:relative;
+  }
+  header.top{
+    background:var(--ink);
+    color:var(--paper);
+    padding:22px 20px 18px;
+    border-bottom:4px solid var(--safety-yellow);
+  }
+  header.top h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    letter-spacing:0.3px;
+    margin:0;
+    text-transform:uppercase;
+  }
+  header.top p{
+    margin:4px 0 0;
+    font-size:13px;
+    color:var(--line-light);
+  }
+  main{
+    flex:1;
+    padding:18px 18px 90px;
+    overflow-y:auto;
+  }
+  .hidden{display:none !important;}
+
+  /* ---- Capture view ---- */
+  .capture-stage{
+    background:var(--panel);
+    border-radius:2px;
+    overflow:hidden;
+    position:relative;
+    aspect-ratio:3/4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .capture-stage video, .capture-stage img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .capture-stage .placeholder{
+    color:var(--line-light);
+    font-size:14px;
+    text-align:center;
+    padding:30px;
+  }
+  .corner{
+    position:absolute;
+    width:26px;
+    height:26px;
+    border:2px solid var(--safety-yellow);
+  }
+  .corner.tl{top:12px;left:12px;border-right:none;border-bottom:none;}
+  .corner.tr{top:12px;right:12px;border-left:none;border-bottom:none;}
+  .corner.bl{bottom:12px;left:12px;border-right:none;border-top:none;}
+  .corner.br{bottom:12px;right:12px;border-left:none;border-top:none;}
+
+  .controls-row{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  button{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border:none;
+    border-radius:2px;
+    padding:14px 16px;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.98);}
+  .btn-primary{
+    background:var(--safety-yellow);
+    color:var(--ink);
+    flex:1;
+  }
+  .btn-secondary{
+    background:transparent;
+    color:var(--ink);
+    border:1.5px solid var(--ink);
+    flex:1;
+  }
+  .btn-ghost{
+    background:transparent;
+    color:var(--muted);
+    text-decoration:underline;
+    padding:10px 4px;
+    font-size:13px;
+  }
+  .btn-danger-outline{
+    background:transparent;
+    color:var(--hazard-red);
+    border:1.5px solid var(--hazard-red);
+  }
+  input[type=file]{display:none;}
+
+  .status-line{
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:18px;
+  }
+  .spinner{
+    width:13px;height:13px;
+    border:2px solid var(--line-light);
+    border-top-color:var(--ink);
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    flex-shrink:0;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---- Review card ---- */
+  .review-card{
+    margin-top:18px;
+    border:1.5px solid var(--ink);
+    background:#fff;
+    padding:16px;
+  }
+  .review-card h2{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 14px;
+    border-bottom:1px solid var(--line-light);
+    padding-bottom:10px;
+  }
+  .field{
+    margin-bottom:14px;
+  }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-bottom:5px;
+    font-weight:500;
+  }
+  .field input[type=text], .field select{
+    width:100%;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+    padding:9px 10px;
+    border:1px solid var(--line-light);
+    border-radius:2px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .toggle-pair{
+    display:flex;
+    gap:8px;
+  }
+  .toggle-opt{
+    flex:1;
+    text-align:center;
+    padding:9px 8px;
+    border:1px solid var(--line-light);
+    border-radius:2px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--muted);
+  }
+  .toggle-opt.active-yes{background:var(--hazard-red);border-color:var(--hazard-red);color:#fff;}
+  .toggle-opt.active-no{background:var(--clear-green);border-color:var(--clear-green);color:#fff;}
+  .hazchem-input{font-family:'IBM Plex Mono',monospace !important;letter-spacing:1px;}
+  .source-note{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:2px;
+  }
+  .source-note a{color:var(--ink);}
+
+  /* ---- Register list ---- */
+  .register-empty{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+  }
+  .register-empty .big{
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    color:var(--ink);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin-bottom:6px;
+  }
+  .reg-item{
+    border-bottom:1px solid var(--line-light);
+    padding:14px 0;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .reg-thumb{
+    width:52px;height:52px;
+    object-fit:cover;
+    border-radius:2px;
+    flex-shrink:0;
+    background:var(--panel);
+  }
+  .reg-body{flex:1;min-width:0;}
+  .reg-title{
+    font-weight:600;
+    font-size:15px;
+    margin:0 0 6px;
+    overflow-wrap:anywhere;
+  }
+  .reg-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:4px;
+  }
+  .tag{
+    font-size:11px;
+    font-weight:600;
+    padding:3px 7px;
+    border-radius:2px;
+    letter-spacing:0.2px;
+  }
+  .tag.red{background:var(--hazard-red);color:#fff;}
+  .tag.green{background:var(--clear-green);color:#fff;}
+  .tag.neutral{background:var(--line-light);color:var(--ink);}
+  .tag.mono{font-family:'IBM Plex Mono',monospace;background:var(--ink);color:var(--safety-yellow);}
+  .reg-del{
+    background:none;border:none;color:var(--muted);
+    font-size:12px;text-decoration:underline;padding:4px;
+    flex-shrink:0;
+  }
+
+  /* ---- Bottom nav ---- */
+  nav.bottom{
+    position:sticky;
+    bottom:0;
+    display:flex;
+    background:var(--ink);
+    border-top:4px solid var(--safety-yellow);
+  }
+  nav.bottom button{
+    flex:1;
+    background:none;
+    border-radius:0;
+    color:var(--line-light);
+    padding:14px 8px 12px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+  }
+  nav.bottom button.active{color:var(--safety-yellow);}
+
+  .top-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .count-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--line-light);
+  }
+
+  .error-box{
+    margin-top:12px;
+    background:#3a1f1a;
+    color:#f2c9bd;
+    border-left:3px solid var(--hazard-red);
+    padding:10px 12px;
+    font-size:13px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="top-actions">
+      <h1 id="pageTitle">New Capture</h1>
+    </div>
+    <p id="pageSub">Photograph the label to identify the product</p>
+  </header>
+
+  <main>
+    <!-- CAPTURE VIEW -->
+    <section id="captureView">
+      <div class="capture-stage" id="stage">
+        <div class="placeholder" id="stagePlaceholder">Camera not started.<br>Tap "Start Camera" below, or upload a photo.</div>
+        <video id="video" autoplay playsinline muted class="hidden"></video>
+        <img id="shotPreview" class="hidden" alt="Captured label">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      </div>
+      <canvas id="canvas" class="hidden"></canvas>
+
+      <div class="controls-row" id="preCaptureControls">
+        <button class="btn-primary" id="startCamBtn">Start Camera</button>
+        <button class="btn-secondary" id="uploadBtn">Upload Photo</button>
+        <input type="file" id="fileInput" accept="image/*" capture="environment">
+      </div>
+
+      <div class="controls-row hidden" id="liveControls">
+        <button class="btn-primary" id="shootBtn">Capture</button>
+        <button class="btn-secondary" id="cancelCamBtn">Cancel</button>
+      </div>
+
+      <div class="controls-row hidden" id="postShotControls">
+        <button class="btn-primary" id="identifyBtn">Identify Product</button>
+        <button class="btn-secondary" id="retakeBtn">Retake</button>
+      </div>
+
+      <div class="status-line" id="statusLine"></div>
+      <div id="errorBox"></div>
+
+      <!-- Review card, filled in after identification -->
+      <div class="review-card hidden" id="reviewCard">
+        <h2>Confirm before saving</h2>
+        <div class="field">
+          <label for="fTitle">Product title</label>
+          <input type="text" id="fTitle">
+        </div>
+        <div class="field">
+          <label>Hazardous substance</label>
+          <div class="toggle-pair" data-target="fHazSub">
+            <div class="toggle-opt" data-val="yes">Yes</div>
+            <div class="toggle-opt" data-val="no">No</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Dangerous goods</label>
+          <div class="toggle-pair" data-target="fDG">
+            <div class="toggle-opt" data-val="yes">Yes</div>
+            <div class="toggle-opt" data-val="no">No</div>
+          </div>
+        </div>
+        <div class="field" id="dgClassField">
+          <label for="fDGClass">Dangerous goods class</label>
+          <input type="text" id="fDGClass" placeholder="e.g. Class 3 — Flammable Liquid">
+        </div>
+        <div class="field">
+          <label for="fHazchem">HazChem code</label>
+          <input type="text" id="fHazchem" class="hazchem-input" placeholder="e.g. 2WE">
+        </div>
+        <p class="source-note" id="sourceNote"></p>
+        <div class="controls-row" style="margin-top:4px;">
+          <button class="btn-primary" id="saveEntryBtn">Save to Register</button>
+          <button class="btn-secondary" id="discardBtn">Discard</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTER VIEW -->
+    <section id="registerView" class="hidden">
+      <div id="registerList"></div>
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <button id="navCapture" class="active">📷 Capture</button>
+    <button id="navRegister">☰ Register</button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  // ---- CONFIG ----
+  // Replace this with your own Cloudflare Worker URL once it's deployed
+  // (see the setup guide). Until then, AI features won't work outside
+  // Claude's own preview.
+  const API_ENDPOINT = 'https://sds-register-proxy.skravo.workers.dev';
+
+  const els = id => document.getElementById(id);
+  const video = els('video'), canvas = els('canvas'), shotPreview = els('shotPreview'), stagePlaceholder = els('stagePlaceholder');
+  const startCamBtn = els('startCamBtn'), uploadBtn = els('uploadBtn'), fileInput = els('fileInput');
+  const preCaptureControls = els('preCaptureControls'), liveControls = els('liveControls'), postShotControls = els('postShotControls');
+  const shootBtn = els('shootBtn'), cancelCamBtn = els('cancelCamBtn'), identifyBtn = els('identifyBtn'), retakeBtn = els('retakeBtn');
+  const statusLine = els('statusLine'), errorBox = els('errorBox');
+  const reviewCard = els('reviewCard');
+  const fTitle = els('fTitle'), fDGClass = els('fDGClass'), fHazchem = els('fHazchem'), sourceNote = els('sourceNote');
+  const saveEntryBtn = els('saveEntryBtn'), discardBtn = els('discardBtn');
+  const navCapture = els('navCapture'), navRegister = els('navRegister');
+  const captureView = els('captureView'), registerView = els('registerView'), registerList = els('registerList');
+  const pageTitle = els('pageTitle'), pageSub = els('pageSub');
+
+  let stream = null;
+  let capturedDataUrl = null;
+  let currentSourceUrl = null;
+  let hazSubVal = null, dgVal = null;
+
+  // ---- toggle pairs ----
+  document.querySelectorAll('.toggle-pair').forEach(pair=>{
+    pair.querySelectorAll('.toggle-opt').forEach(opt=>{
+      opt.addEventListener('click', ()=>{
+        pair.querySelectorAll('.toggle-opt').forEach(o=>o.classList.remove('active-yes','active-no'));
+        opt.classList.add(opt.dataset.val==='yes' ? 'active-yes' : 'active-no');
+        const target = pair.dataset.target;
+        if(target==='fHazSub') hazSubVal = opt.dataset.val;
+        if(target==='fDG'){
+          dgVal = opt.dataset.val;
+          els('dgClassField').style.display = dgVal==='yes' ? 'block' : 'none';
+        }
+      });
+    });
+  });
+
+  function setStatus(msg, spinning){
+    statusLine.innerHTML = spinning ? `<div class="spinner"></div><span>${msg}</span>` : (msg||'');
+  }
+  function showError(msg){
+    errorBox.innerHTML = msg ? `<div class="error-box">${msg}</div>` : '';
+  }
+
+  // ---- Camera flow ----
+  startCamBtn.addEventListener('click', async ()=>{
+    showError('');
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+      video.srcObject = stream;
+      video.classList.remove('hidden');
+      stagePlaceholder.classList.add('hidden');
+      shotPreview.classList.add('hidden');
+      preCaptureControls.classList.add('hidden');
+      liveControls.classList.remove('hidden');
+      postShotControls.classList.add('hidden');
+    }catch(err){
+      showError('Camera access was blocked or unavailable. Try "Upload Photo" instead.');
+    }
+  });
+
+  cancelCamBtn.addEventListener('click', stopCameraToIdle);
+
+  function stopCameraToIdle(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.classList.add('hidden');
+    stagePlaceholder.classList.remove('hidden');
+    liveControls.classList.add('hidden');
+    preCaptureControls.classList.remove('hidden');
+  }
+
+  shootBtn.addEventListener('click', ()=>{
+    const w = video.videoWidth, h = video.videoHeight;
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video,0,0,w,h);
+    capturedDataUrl = canvas.toDataURL('image/jpeg',0.9);
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.classList.add('hidden');
+    shotPreview.src = capturedDataUrl;
+    shotPreview.classList.remove('hidden');
+    liveControls.classList.add('hidden');
+    postShotControls.classList.remove('hidden');
+  });
+
+  retakeBtn.addEventListener('click', ()=>{
+    capturedDataUrl = null;
+    shotPreview.classList.add('hidden');
+    stagePlaceholder.classList.remove('hidden');
+    postShotControls.classList.add('hidden');
+    preCaptureControls.classList.remove('hidden');
+    reviewCard.classList.add('hidden');
+    showError('');
+  });
+
+  uploadBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      capturedDataUrl = reader.result;
+      stagePlaceholder.classList.add('hidden');
+      shotPreview.src = capturedDataUrl;
+      shotPreview.classList.remove('hidden');
+      preCaptureControls.classList.add('hidden');
+      postShotControls.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---- Identification + SDS lookup ----
+  identifyBtn.addEventListener('click', async ()=>{
+    if(!capturedDataUrl) return;
+    showError('');
+    reviewCard.classList.add('hidden');
+    postShotControls.classList.add('hidden');
+    try{
+      setStatus('Reading the label…', true);
+      const base64 = capturedDataUrl.split(',')[1];
+      const mediaType = capturedDataUrl.substring(5, capturedDataUrl.indexOf(';'));
+
+      const idResp = await fetch(`${API_ENDPOINT}/v1/messages`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:300,
+          messages:[{
+            role:'user',
+            content:[
+              {type:'image', source:{type:'base64', media_type: mediaType, data: base64}},
+              {type:'text', text:'Identify the exact product name and brand shown on this label or container, as it would appear on a manufacturer safety data sheet. Respond with ONLY the product name and brand, nothing else. If you cannot identify a specific product, respond with exactly: UNKNOWN'}
+            ]
+          }]
+        })
+      });
+      const idData = await idResp.json();
+      const productGuess = (idData.content||[]).map(b=>b.text||'').join('').trim();
+
+      if(!productGuess || productGuess.toUpperCase().includes('UNKNOWN')){
+        setStatus('');
+        showError('Could not identify the product from this photo. Try a clearer shot of the label, or enter details manually below.');
+        openReviewCard({title:'', hazSub:null, dg:null, dgClass:'', hazchem:'', source:null});
+        return;
+      }
+
+      setStatus(`Identified "${productGuess}". Searching for its safety data sheet…`, true);
+
+      const sdsResp = await fetch(`${API_ENDPOINT}/v1/messages`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:1000,
+          messages:[{
+            role:'user',
+            content:`Search the web for the Safety Data Sheet (SDS) for the product: "${productGuess}".
+Find the manufacturer's official SDS if possible. From it, extract:
+- title: the product's proper name
+- hazardous_substance: "yes" or "no" (per GHS/WHS classification, i.e. does it meet criteria for a hazardous substance/hazardous chemical)
+- dangerous_goods: "yes" or "no" (per ADG/UN transport classification)
+- dangerous_goods_class: the UN dangerous goods class and division if applicable (e.g. "Class 3 - Flammable Liquid"), or "" if not applicable
+- hazchem_code: the Emergency Action Code / HazChem code if stated, or "" if none
+- source_url: the URL of the SDS you used
+- confidence: "high", "medium", or "low" based on how directly the source stated these fields
+
+Respond with ONLY a single valid JSON object with exactly these keys, no markdown fences, no commentary. If you cannot find an SDS at all, respond with exactly: {"not_found": true}`
+          }],
+          tools:[{type:'web_search_20250305', name:'web_search'}]
+        })
+      });
+      const sdsData = await sdsResp.json();
+      const rawText = (sdsData.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+      const cleaned = rawText.replace(/```json|```/g,'').trim();
+
+      let parsed;
+      try{ parsed = JSON.parse(cleaned); }
+      catch(e){
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if(match){ try{ parsed = JSON.parse(match[0]); }catch(e2){ parsed = null; } }
+      }
+
+      setStatus('');
+
+      if(!parsed || parsed.not_found){
+        showError(`No SDS could be found for "${productGuess}". You can still save this entry and fill the fields in manually.`);
+        openReviewCard({title:productGuess, hazSub:null, dg:null, dgClass:'', hazchem:'', source:null});
+        return;
+      }
+
+      if(parsed.confidence === 'low'){
+        showError('The extracted hazard data has low confidence — please verify against the source SDS before relying on it.');
+      }
+
+      openReviewCard({
+        title: parsed.title || productGuess,
+        hazSub: parsed.hazardous_substance === 'yes' ? 'yes' : (parsed.hazardous_substance === 'no' ? 'no' : null),
+        dg: parsed.dangerous_goods === 'yes' ? 'yes' : (parsed.dangerous_goods === 'no' ? 'no' : null),
+        dgClass: parsed.dangerous_goods_class || '',
+        hazchem: parsed.hazchem_code || '',
+        source: parsed.source_url || null
+      });
+
+    }catch(err){
+      setStatus('');
+      showError('Something went wrong reaching the lookup service. Check your connection and try again.');
+      postShotControls.classList.remove('hidden');
+    }
+  });
+
+  function openReviewCard(data){
+    fTitle.value = data.title || '';
+    fDGClass.value = data.dgClass || '';
+    fHazchem.value = data.hazchem || '';
+    currentSourceUrl = data.source;
+    sourceNote.innerHTML = data.source
+      ? `Source: <a href="${data.source}" target="_blank" rel="noopener">${data.source}</a> — always cross-check against the manufacturer SDS.`
+      : "No source found — please verify these fields manually against the product's SDS.";
+
+    document.querySelectorAll('[data-target="fHazSub"] .toggle-opt').forEach(o=>{
+      o.classList.remove('active-yes','active-no');
+      if(o.dataset.val===data.hazSub) o.classList.add(data.hazSub==='yes'?'active-yes':'active-no');
+    });
+    document.querySelectorAll('[data-target="fDG"] .toggle-opt').forEach(o=>{
+      o.classList.remove('active-yes','active-no');
+      if(o.dataset.val===data.dg) o.classList.add(data.dg==='yes'?'active-yes':'active-no');
+    });
+    hazSubVal = data.hazSub; dgVal = data.dg;
+    els('dgClassField').style.display = dgVal==='yes' ? 'block' : 'none';
+
+    reviewCard.classList.remove('hidden');
+    postShotControls.classList.add('hidden');
+  }
+
+  discardBtn.addEventListener('click', resetCaptureFlow);
+
+  function resetCaptureFlow(){
+    capturedDataUrl = null; currentSourceUrl = null; hazSubVal=null; dgVal=null;
+    shotPreview.classList.add('hidden');
+    stagePlaceholder.classList.remove('hidden');
+    reviewCard.classList.add('hidden');
+    preCaptureControls.classList.remove('hidden');
+    postShotControls.classList.add('hidden');
+    showError(''); setStatus('');
+  }
+
+  // ---- Save to register (persistent storage) ----
+  const STORAGE_KEY = 'hazard-register-entries';
+
+  async function loadEntries(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  async function saveEntries(entries){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+    catch(e){ showError('Could not save — storage error. Try again.'); }
+  }
+
+  saveEntryBtn.addEventListener('click', async ()=>{
+    if(!fTitle.value.trim()){ showError('Give the product a title before saving.'); return; }
+    const entry = {
+      id: 'entry_' + Date.now(),
+      title: fTitle.value.trim(),
+      hazSub: hazSubVal,
+      dg: dgVal,
+      dgClass: dgVal==='yes' ? fDGClass.value.trim() : '',
+      hazchem: fHazchem.value.trim(),
+      source: currentSourceUrl,
+      thumb: capturedDataUrl,
+      savedAt: new Date().toISOString()
+    };
+    const entries = await loadEntries();
+    entries.unshift(entry);
+    await saveEntries(entries);
+    resetCaptureFlow();
+    renderRegister();
+    switchView('register');
+  });
+
+  // ---- Register view ----
+  function tagHtml(entry){
+    let out = '';
+    if(entry.hazSub === 'yes') out += `<span class="tag red">Hazardous substance</span>`;
+    else if(entry.hazSub === 'no') out += `<span class="tag green">Not hazardous</span>`;
+    else out += `<span class="tag neutral">Haz. substance unknown</span>`;
+
+    if(entry.dg === 'yes') out += `<span class="tag red">Dangerous goods</span>`;
+    else if(entry.dg === 'no') out += `<span class="tag green">Not DG</span>`;
+    else out += `<span class="tag neutral">DG unknown</span>`;
+
+    if(entry.dgClass) out += `<span class="tag neutral">${entry.dgClass}</span>`;
+    if(entry.hazchem) out += `<span class="tag mono">HAZCHEM ${entry.hazchem}</span>`;
+    return out;
+  }
+
+  async function renderRegister(){
+    const entries = await loadEntries();
+    if(entries.length === 0){
+      registerList.innerHTML = `<div class="register-empty"><div class="big">Register is empty</div>Capture a product label to add the first entry.</div>`;
+      return;
+    }
+    registerList.innerHTML = entries.map(e => `
+      <div class="reg-item" data-id="${e.id}">
+        ${e.thumb ? `<img class="reg-thumb" src="${e.thumb}">` : `<div class="reg-thumb"></div>`}
+        <div class="reg-body">
+          <p class="reg-title">${e.title}</p>
+          <div class="reg-tags">${tagHtml(e)}</div>
+          ${e.source ? `<a class="source-note" href="${e.source}" target="_blank" rel="noopener">View source SDS</a>` : ''}
+        </div>
+        <button class="reg-del" data-del="${e.id}">Remove</button>
+      </div>
+    `).join('');
+
+    registerList.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.del;
+        const entries = await loadEntries();
+        await saveEntries(entries.filter(e=>e.id!==id));
+        renderRegister();
+      });
+    });
+  }
+
+  // ---- Nav ----
+  function switchView(which){
+    if(which==='capture'){
+      captureView.classList.remove('hidden');
+      registerView.classList.add('hidden');
+      navCapture.classList.add('active'); navRegister.classList.remove('active');
+      pageTitle.textContent = 'New Capture';
+      pageSub.textContent = 'Photograph the label to identify the product';
+    } else {
+      captureView.classList.add('hidden');
+      registerView.classList.remove('hidden');
+      navCapture.classList.remove('active'); navRegister.classList.add('active');
+      pageTitle.textContent = 'Hazard Register';
+      loadEntries().then(entries=>{
+        pageSub.textContent = entries.length + (entries.length===1 ? ' item logged' : ' items logged');
+      });
+      renderRegister();
+    }
+  }
+  navCapture.addEventListener('click', ()=>switchView('capture'));
+  navRegister.addEventListener('click', ()=>switchView('register'));
+
+  renderRegister();
+})();
+</script>
+</body>
+</html>
